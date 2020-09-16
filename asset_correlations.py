@@ -11,7 +11,7 @@ import seaborn as sns
 #create dictionary of asset names
 names={'sp500':'^GSPC','tsx':'^GSPTSE','intl':'EFA',
        '13wk':'^IRX','5yr':'^FVX','10yr':'^TNX','30yr':'^TYX',
-       'tips':'TIP','gold':'GLD','reits':'^RMZ'}
+       'tips':'TIP','gold':'GLD','goldcdn':'CGL.TO','reits':'^RMZ','barrick':'ABX.TO'}
 notbonds=['sp500','tsx','intl','tips','gold','reits']
 bonds=['13wk','5yr','10yr','30yr']
 
@@ -64,9 +64,13 @@ cumul_returns.plot()
 cumul_returns.describe()
 corr=cumul_returns.corr()
 
-cumul_returns[real].plot()
+cumul_returns[['goldcdn','gold']].plot()
 plt.ylabel('Returns')
 plt.xlabel('Year')
 
-sns.regplot(cumul_returns['sp500'],cumul_returns['10yr'])
-pearson_coef,p_value=stats.pearsonr(cumul_returns['sp500'],cumul_returns['10yr'])
+sns.regplot(cumul_returns['goldcdn'],cumul_returns['gold'])
+pearson_coef,p_value=stats.pearsonr(cumul_returns['goldcdn'],cumul_returns['gold'])
+
+test = returns[['sp500','tsx','intl','gold','5yr','30yr','reits']].corr()
+sns.heatmap(test,annot = True,cmap = sns.diverging_palette(10,240, n=100), cbar = True)
+plt.title('Correlations of Returns for Various Asset Classes')
