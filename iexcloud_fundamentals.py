@@ -124,8 +124,8 @@ def ratio_analysis(name,api_key):
     
     return ratios_df
 
-# testdf = ratio_analysis(name,api_key)
-testdf2 = ratio_analysis(name2,api_key)
+testdf = ratio_analysis(name,api_key)
+# testdf2 = ratio_analysis(name2,api_key)
 # testdf
 
 def get_prices(df,name):
@@ -137,8 +137,8 @@ def get_prices(df,name):
     ticker = name
     return prices, ticker
 
-# prices, ticker = get_prices(testdf,name)
-prices2, ticker2 = get_prices(testdf2,name2)
+prices, ticker = get_prices(testdf,name)
+# prices2, ticker2 = get_prices(testdf2,name2)
 
 def plot_profit(prices, ticker, df):
     fig, ax1 = plt.subplots()

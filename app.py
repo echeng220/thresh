@@ -4,6 +4,7 @@
 import pandas as pd
 import plotly.express as px  # (version 4.7.0)
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 import dash  # (version 1.12.0) pip install dash
 import dash_core_components as dcc
@@ -31,6 +32,11 @@ colors = {
     'dcctext': '#FFFFE0'
     }
 
+col_labels = ['date','Gross Profit [%]','Net Profit [%]','EPS','ROE','Current Ratio',\
+             'Cash Ratio','Debt-to-Equity','Debt-to-Assets',\
+            'Leverage','Interest Coverage','Debt Coverage',\
+            'Dividend Coverage']
+
 #FUNCTIONS TO DO RATIO ANALYSIS AND RETRIEVE PRICES
 def ratio_analysis(name, api_key):
     #create dictionary of url's to make separate API requests for each financial statement
@@ -45,8 +51,10 @@ def ratio_analysis(name, api_key):
     r = {statement:requests.get(url).json() for (statement,url) in urls.items()}
 
     #create list of columns that are desired in final dataframe
-    col_labels = ['date','gross','net','EPS','roe','current','cash','debt-equity',\
-                  'debt-assets','leverage','int-cov','debt-cov','dividend-cov']
+    col_labels = ['date','Gross Profit [%]','Net Profit [%]','EPS','ROE','Current Ratio',\
+                  'Cash Ratio','Debt-to-Equity','Debt-to-Assets',\
+                      'Leverage','Interest Coverage','Debt Coverage',\
+                          'Dividend Coverage']
 
     #each element in this list will be a list of ratios calculated for a given statement
     ratios_matrix = []
@@ -167,10 +175,16 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                  # style = {'font-family': 'monospace', 
                         # 'backgroundColor': colors['dcc'],
                         # 'color': colors['dcctext']}
+        dcc.Dropdown(id='metric',
+                     options=[{'label':col,'value':col} for col in col_labels],
+                     value='Net Profit [%]',
+                     style={'font-family':'monospace'}),
+        
         dcc.Graph(
         id = 'price_chart',
-        figure = {}
-        ),
+        figure = {}),
+        
+
         dcc.Graph(
         id='metric_chart',
         figure={}
@@ -208,17 +222,24 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 
 #connect Plotly graph with Dash components
 @app.callback(
-    Output(component_id = 'price_chart', component_property = 'figure'),
-      # Output(),
-      [Input(component_id='select_stock', component_property='value')]
+    [Output(component_id='price_chart', component_property='figure'),
+     Output(component_id='metric_chart', component_property='figure')],
+      [Input(component_id='select_stock', component_property='value'),
+       Input(component_id='metric', component_property='value')]
     )
 
-def update_price(selected_stock):
-    df = ratio_analysis(selected_stock, api_key)
-    prices, ticker = get_prices(df, selected_stock)
-
+def update_price(selected_stock, selected_metric):
+    ratios = ratio_analysis(selected_stock, api_key)
+    prices, ticker = get_prices(ratios, selected_stock)
+    
+    # fig = make_subplots(rows=2, cols=1, shared_xaxes=True,\
+    #                     subplot_titles=(f'{ticker}',\
+    #                                     '{} {}'.format(ticker,selected_metric)))
+    # fig.append_trace(go.Line(x=prices['date'],y=prices['close'],),row=1,col=1)
+    # fig.append_trace(go.Line(x=ratios['date'],y=ratios[selected_metric],),row=2,col=1)
     #plot prices
     price_fig = px.line(prices, x='date', y='close')
+    # price_fig.add_scatter(x=ratios['date'],y=ratios[selected_metric],mode='lines')
     price_fig.update_layout(
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
@@ -230,7 +251,23 @@ def update_price(selected_stock):
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
-    return price_fig
+    
+    #plot metrics
+    metric_fig = px.line(ratios, x='date', y=selected_metric)
+    # fig.update_xaxes(title_text="Date", row=1, col=1)
+    # fig.update_xaxes(title_text="Date", row=2, col=1)
+    # fig.update_yaxes(title_text="Closing Price",row=1, col=1)
+    # fig.update_yaxes(title_text="{}".format(selected_metric), row=2, col=1)
+    metric_fig.update_xaxes(range=[prices['date'].iloc[0], prices['date'].iloc[-1]])
+    metric_fig.update_layout(
+        plot_bgcolor = colors['background'],
+        paper_bgcolor = colors['background'],
+        font_family = 'monospace',
+        font_color = colors['text'])
+    return price_fig, metric_fig
+    # fig.update_layout(width=700,height=500)
+    # fig.show()
+    # return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True)
