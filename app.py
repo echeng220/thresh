@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import datetime
+from datetime import datetime as dt
 from datetime import date
 import calendar
 
@@ -176,7 +177,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                         # 'backgroundColor': colors['dcc'],
                         # 'color': colors['dcctext']}
         dcc.Dropdown(id='metric',
-                     options=[{'label':col,'value':col} for col in col_labels],
+                     options=[{'label':col,'value':col} for col in col_labels[1:]],
                      value='Net Profit [%]',
                      style={'font-family':'monospace'}),
         
@@ -188,39 +189,53 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         dcc.Graph(
         id='metric_chart',
         figure={}
-        ),
-    ])
-    ])
-    # html.Div([
-    #     html.H2('2nd Section', 
-    #         style={
-    #             'font-family': 'monospace',
-    #             'color': colors['text']})])
-    # )
+        )],
+        style={'height':'50%','width': '67%', 'display': 'inline-block'}
+    ), #1st Div closing brackets
     
-    #     dcc.Input(id='select_metric',
-    #              value = 'Select other metric', type = 'text')
-    #              # style={'font-family': 'monospace', 
-    #              #        'backgroundColor': colors['dcc'],
-    #              #        'color': colors['dcctext']}
-    #     dcc.Graph(
-    #     id='example-graph2',
-    #     figure={}
-    #     )
-    # style={'width': '32%', 'align': 'right', 'display': 'inline-block'},
+    html.Div([
+        html.H2('2nd Section', 
+            style={
+                'font-family': 'monospace',
+                'color': colors['text']}),
     
-    # html.Div(
-    #     ),
+        dcc.DatePickerSingle(id='yield_curve_date',
+                  min_date_allowed = dt(1965,7,7), 
+                  max_date_allowed=datetime.date.today(),
+                  initial_visible_month=datetime.date.today(),
+                  date=datetime.date.today(),
+                  style={'font-family': 'monospace', 
+                          'backgroundColor': colors['dcc'],
+                          'color': colors['dcctext']}),
+        dcc.Graph(
+        id='yield_curve',
+        figure={}
+        )],
+    style={'width': '33%', 'align': 'right',\
+           'display': 'inline-block'}
+    ), #2nd Div closing brackets
+    
+    html.Div([
     
     # html.Br(),
+    html.H2('3rd Section',
+        style={
+            'font-family': 'monospace',
+            'color': colors['text']}),    
+    
+    dcc.Dropdown(id='indicator',
+        options=[{'label':'Unemployment', 'value':'Unemployment'}],
+        value='Unemployment',
+        style={'font-family':'monospace'}),
 
-    # dcc.Graph(
-    #     id='example-graph3',
-    #     figure={}
-    # )
+    dcc.Graph(
+        id='econ_graph',
+        figure={}
+    )]
+    ) #3rd Div closing brackets
+    ]) #big block closing brackets
 
-
-#connect Plotly graph with Dash components
+#connect Plotly price/analysis graphs with Dash components
 @app.callback(
     [Output(component_id='price_chart', component_property='figure'),
      Output(component_id='metric_chart', component_property='figure')],
@@ -228,7 +243,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
        Input(component_id='metric', component_property='value')]
     )
 
-def update_price(selected_stock, selected_metric):
+def update_charts(selected_stock, selected_metric):
     ratios = ratio_analysis(selected_stock, api_key)
     prices, ticker = get_prices(ratios, selected_stock)
     
@@ -237,9 +252,14 @@ def update_price(selected_stock, selected_metric):
     #                                     '{} {}'.format(ticker,selected_metric)))
     # fig.append_trace(go.Line(x=prices['date'],y=prices['close'],),row=1,col=1)
     # fig.append_trace(go.Line(x=ratios['date'],y=ratios[selected_metric],),row=2,col=1)
+   
     #plot prices
-    price_fig = px.line(prices, x='date', y='close')
-    # price_fig.add_scatter(x=ratios['date'],y=ratios[selected_metric],mode='lines')
+    price_fig = px.area(prices, x='date', y='close')
+    if prices['close'].iloc[0]<prices['close'].iloc[-1]:
+        fill='#98FB98'
+    else:
+        fill='#CD5C5C'
+    price_fig.update_traces(line_color=fill)
     price_fig.update_layout(
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
@@ -259,6 +279,7 @@ def update_price(selected_stock, selected_metric):
     # fig.update_yaxes(title_text="Closing Price",row=1, col=1)
     # fig.update_yaxes(title_text="{}".format(selected_metric), row=2, col=1)
     metric_fig.update_xaxes(range=[prices['date'].iloc[0], prices['date'].iloc[-1]])
+    metric_fig.update_traces(line_color='#FFFF00')
     metric_fig.update_layout(
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
@@ -268,6 +289,42 @@ def update_price(selected_stock, selected_metric):
     # fig.update_layout(width=700,height=500)
     # fig.show()
     # return fig
+
+#connect Plotly yield curve with Dash components
+@app.callback(
+    Output(component_id='yield_curve', component_property='figure'),
+      Input(component_id='yield_curve_date', component_property='date')
+    )
+def update_yieldcurve(selected_date):
+    treasuries = {'13 Week':'^IRX','5 Year':'^FVX','10 Year':'^TNX',\
+                  '30 Year':'^TYX'}
+    treasury_names = list(treasuries.keys())
+    treasury_symbols = list(treasuries.values())
+    treasury_yields = {}
+
+    # today = datetime.date.today()
+    # day_of_week = calendar.day_name[today.weekday()]
+
+    # if day_of_week == 'Saturday':
+    #     today = today - datetime.timedelta(days = 1)
+    # elif day_of_week == 'Sunday':
+    #     today = today - datetime.timedelta(days = 2)
+    
+    for bill in list(treasuries.values()):
+        treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
+                        yf.Ticker(bill).history(start=selected_date).Close[0]})
+
+    yields = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
+    yields.columns = ['Treasury','Yield [%]']
+    yield_curve = px.bar(yields,x='Treasury',y='Yield [%]', color='Treasury',\
+                         color_discrete_sequence=['#B0E0E6','#ADD8E6',\
+                            '#87CEFA','#1E90FF'])
+    yield_curve.update_layout(
+        plot_bgcolor = colors['background'],
+        paper_bgcolor = colors['background'],
+        font_family = 'monospace',
+        font_color = colors['text'])
+    return yield_curve
 
 if __name__ == '__main__':
     app.run_server(debug=True)

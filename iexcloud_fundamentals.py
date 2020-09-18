@@ -255,25 +255,25 @@ def plot_metric(prices, ticker, df, metric):
 plot_metric(prices, ticker, testdf, 'debt-cov')
 # plot_metric(prices2, ticker2, testdf2, 'debt-cov')
 
-def get_pe_ratio(df,prices):
-    df = df.merge(prices, on = 'date', how = 'left')
+# def get_pe_ratio(df,prices):
+#     df = df.merge(prices, on = 'date', how = 'left')
 
-    for i in range(len(df.close)):
-            if np.isnan(df.close[i]):
-                try:
-                    closest_date = df.date[i] + datetime.timedelta(days = 1)
-                    df.close[i] = float(prices[prices.date == closest_date].close)
-                except:
-                    try:
-                        closest_date = df.date[i] - datetime.timedelta(days = 1)
-                        df.close[i] = float(prices[prices.date == closest_date].close)
-                    except:
-                        closest_date = df.date[i] - datetime.timedelta(days = 3)
-                        df.close[i] = float(prices[prices.date == closest_date].close)
-    df['P/E'] = df.close / df.EPS
-    return df
+#     for i in range(len(df.close)):
+#             if np.isnan(df.close[i]):
+#                 try:
+#                     closest_date = df.date[i] + datetime.timedelta(days = 1)
+#                     df.close[i] = float(prices[prices.date == closest_date].close)
+#                 except:
+#                     try:
+#                         closest_date = df.date[i] - datetime.timedelta(days = 1)
+#                         df.close[i] = float(prices[prices.date == closest_date].close)
+#                     except:
+#                         closest_date = df.date[i] - datetime.timedelta(days = 3)
+#                         df.close[i] = float(prices[prices.date == closest_date].close)
+#     df['P/E'] = df.close / df.EPS
+#     return df
 
-testdf = get_pe_ratio(testdf,prices)
+# testdf = get_pe_ratio(testdf,prices)
 
 plot_metric(prices, ticker, testdf, 'P/E')
 
@@ -304,16 +304,18 @@ def plot_yield_curve(today=datetime.date.today()):
         treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
                         yf.Ticker(bill).history(start=today).Close[0]})
 
-    yield_curve = pd.DataFrame(treasury_yields,index=[0])
+    yield_curve = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
+    yield_curve.columns=['Treasury','Yield']
     # yield_curve = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
     # yield_curve.columns = ['Bond','Yield']
-    sns.barplot(data=yield_curve, palette = sns.cubehelix_palette(8),edgecolor='dimgrey')
-    plt.ylabel('Yield [%]')
-    plt.xlabel('Treasury Security')
-    plt.title('Yield Curve for {}, {}'.format(new_day_of_week,today))
-    return plt.show()
+    # sns.barplot(data=yield_curve, palette = sns.cubehelix_palette(8),edgecolor='dimgrey')
+    # plt.ylabel('Yield [%]')
+    # plt.xlabel('Treasury Security')
+    # plt.title('Yield Curve for {}, {}'.format(new_day_of_week,today))
+    return yield_curve, treasury_yields #plt.show()
 
-plot_yield_curve()
+yc, ty =plot_yield_curve()
+
 # plot_yield_curve(today=datetime.date(2000,2,2))
 
 names={'SP500':'^GSPC','EAFE':'EFA','Russell2000':'^RUT',\
