@@ -156,6 +156,38 @@ def get_prices(df, name):
     ticker = name
     return prices, ticker
 
+def bench_returns():
+    benchmarks={'S&P 500':'^GSPC','Russell 2000':'^RUT',\
+       '10 Year':'^TNX','High Yield Corp':'HYG','Gold':'GC=F'}
+    benchmark_prices={}
+    for i in range(0,len(benchmarks)):
+        benchmark_prices.update({list(benchmarks.keys())[i]:
+        yf.Ticker(str(list(benchmarks.values())[i])).history(period='6mo')['Close']})
+            
+    prices_df = pd.DataFrame(benchmark_prices).dropna()
+    returns = prices_df.pct_change(fill_method='ffill').dropna()
+    cumul_returns = (1 + returns).cumprod()
+    total_returns = (cumul_returns - 1) * 100
+    
+    returns_fig = px.line(total_returns,x=total_returns.index,\
+                          y=list(benchmarks.keys()))
+    returns_fig.update_layout(
+        yaxis_title = 'Total Returns [%]',
+        legend = dict(orientation='h',yanchor='bottom',\
+                      y=-0.35,xanchor='left',x=-0.1),
+        legend_title_text='Benchmarks:',
+        plot_bgcolor = colors['background'],
+        paper_bgcolor = colors['background'],
+        font_family = 'monospace',
+        font_color = colors['text'],
+        title = {
+            'text': '6 Month Returns of Common Benchmarks',
+            'y': 0.9,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+    return returns_fig
+
 #app layout
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     
@@ -184,16 +216,17 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         dcc.Graph(
         id = 'price_chart',
         figure = {}),
-        
 
         dcc.Graph(
         id='metric_chart',
         figure={}
         )],
+        #set layout for 1st Div
         style={'height':'50%','width': '67%', 'display': 'inline-block'}
     ), #1st Div closing brackets
     
     html.Div([
+        html.Br(), html.Br(),
         html.H2('2nd Section', 
             style={
                 'font-family': 'monospace',
@@ -209,29 +242,32 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                           'color': colors['dcctext']}),
         dcc.Graph(
         id='yield_curve',
-        figure={}
-        )],
+        figure={}),
+        
+        dcc.Graph(
+        id='returns_chart',
+        figure=bench_returns())
+        ],
+    #set layout for 2nd Div
     style={'width': '33%', 'align': 'right',\
            'display': 'inline-block'}
     ), #2nd Div closing brackets
     
     html.Div([
-    
-    # html.Br(),
-    html.H2('3rd Section',
-        style={
+        html.H2('3rd Section',
+            style={
             'font-family': 'monospace',
             'color': colors['text']}),    
     
-    dcc.Dropdown(id='indicator',
-        options=[{'label':'Unemployment', 'value':'Unemployment'}],
-        value='Unemployment',
-        style={'font-family':'monospace'}),
+        dcc.Dropdown(id='indicator',
+            options=[{'label':'Unemployment', 'value':'Unemployment'}],
+            value='Unemployment',
+            style={'font-family':'monospace'}),
 
-    dcc.Graph(
-        id='econ_graph',
-        figure={}
-    )]
+        dcc.Graph(
+            id='econ_graph',
+            figure={})
+    ]
     ) #3rd Div closing brackets
     ]) #big block closing brackets
 
@@ -244,6 +280,10 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     )
 
 def update_charts(selected_stock, selected_metric):
+    """Update the price chart and fundamental analysis
+    for a selected stock. Inputs are the selected stock and chosen 
+    fundamentals metric."""
+    
     ratios = ratio_analysis(selected_stock, api_key)
     prices, ticker = get_prices(ratios, selected_stock)
     
@@ -261,6 +301,7 @@ def update_charts(selected_stock, selected_metric):
         fill='#CD5C5C'
     price_fig.update_traces(line_color=fill)
     price_fig.update_layout(
+        yaxis_title = 'Closing Price [$]',
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
@@ -284,18 +325,27 @@ def update_charts(selected_stock, selected_metric):
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
-        font_color = colors['text'])
+        font_color = colors['text'],
+        title = {
+            'text': f'{ticker} {selected_metric}',
+            'y': 0.9,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
     return price_fig, metric_fig
     # fig.update_layout(width=700,height=500)
     # fig.show()
     # return fig
 
-#connect Plotly yield curve with Dash components
+#connect Plotly yield curve/return history with Dash components
 @app.callback(
     Output(component_id='yield_curve', component_property='figure'),
-      Input(component_id='yield_curve_date', component_property='date')
+    Input(component_id='yield_curve_date', component_property='date')
     )
 def update_yieldcurve(selected_date):
+    """Update the yield curve with the selected date (default today),
+    and show the previous 6 months of returns for some benchmarks."""
+    
     treasuries = {'13 Week':'^IRX','5 Year':'^FVX','10 Year':'^TNX',\
                   '30 Year':'^TYX'}
     treasury_names = list(treasuries.keys())
@@ -303,12 +353,11 @@ def update_yieldcurve(selected_date):
     treasury_yields = {}
 
     # today = datetime.date.today()
-    # day_of_week = calendar.day_name[today.weekday()]
-
-    # if day_of_week == 'Saturday':
-    #     today = today - datetime.timedelta(days = 1)
-    # elif day_of_week == 'Sunday':
-    #     today = today - datetime.timedelta(days = 2)
+    # day_of_week = calendar.day_name[selected_date]
+    # if selected_date == 'Saturday':
+    #     selected_date = selected_date - datetime.timedelta(days = 1)
+    # elif selected_date == 'Sunday':
+    #     selected_date = selected_date - datetime.timedelta(days = 2)
     
     for bill in list(treasuries.values()):
         treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
@@ -320,10 +369,18 @@ def update_yieldcurve(selected_date):
                          color_discrete_sequence=['#B0E0E6','#ADD8E6',\
                             '#87CEFA','#1E90FF'])
     yield_curve.update_layout(
+        showlegend= False,
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
-        font_color = colors['text'])
+        font_color = colors['text'],
+        title = {
+            'text': f'Yield Curve for {selected_date}',
+            'y': 0.9,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+    
     return yield_curve
 
 if __name__ == '__main__':
