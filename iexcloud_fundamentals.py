@@ -14,6 +14,7 @@ import seaborn as sns
 import datetime
 from datetime import date
 import calendar
+import time
 
 #declare API key and name of stock to get
 api_key = 'Tpk_cec90dded9cd4f3b9c0295462c57fbcd'
@@ -341,3 +342,34 @@ total_returns.plot()
 plt.ylabel('Cummulative Returns [%]')
 plt.title('6 Month Returns of Common Benchmarks')
 plt.legend(bbox_to_anchor=(1,1))
+
+def econ_indicator(api_key):
+    indicators = {'Real GDP':'A191RL1Q225SBEA','Unemployment Rate':'UNRATE'}
+    time_urls = {k:\
+        'https://sandbox.iexapis.com/stable/time-series/economic/{}?last=24&token={}'\
+    .format(ind,api_key) for k,ind in indicators.items()}
+
+    #create dictionary containing all economic indicators requested from API
+    r_time = {ind:requests.get(url).json() for (ind,url) in time_urls.items()}
+    
+    others = {'CPI':'CPIAUCSL','Initial Claims':'IC4WSA','Payrolls':'PAYEMS'}
+    point_urls = {k:\
+        'https://sandbox.iexapis.com/stable/data-points/market/{}?&token={}'\
+    .format(ind,api_key) for k,ind in others.items()}
+    
+    r_points = {ind:requests.get(url).json() for (ind,url) in point_urls.items()}
+    
+    time_series_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
+            for i in range(0,len(r_time['Real GDP'])))
+    time_series_df.columns=['Real GDP']
+    time_series_df['Real GDP Date'] = [datetime.datetime.\
+        fromtimestamp(r_time['Real GDP'][i]['updated']/1000).strftime('%Y-%m-%d') \
+            for i in range(0,len(r_time['Real GDP']))]
+    time_series_df['Unemployment Rate'] = [r_time['Unemployment Rate'][i]['value']\
+            for i in range(0,len(r_time['Unemployment Rate']))]
+    time_series_df['Unemployment Rate Date'] = [datetime.datetime.\
+        fromtimestamp(r_time['Unemployment Rate'][i]['updated']/1000).strftime('%Y-%m-%d') \
+            for i in range(0,len(r_time['Unemployment Rate']))]
+    
+    cpi = r_points['CPI']
+    ini_claims = r_points['Initial Claims']

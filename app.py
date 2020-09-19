@@ -188,17 +188,65 @@ def bench_returns():
             'yanchor': 'top'})
     return returns_fig
 
+def plot_econ_indicators():
+    """Update the economic indicator chart with the selected indicator."""
+    
+    indicators = {'Real GDP':'A191RL1Q225SBEA','Unemployment Rate':'UNRATE'}
+    time_urls = {k:\
+        'https://sandbox.iexapis.com/stable/time-series/economic/{}?last=24&token={}'\
+    .format(ind,api_key) for k,ind in indicators.items()}
+
+    #create dictionary containing all economic indicators requested from API
+    r_time = {ind:requests.get(url).json() for (ind,url) in time_urls.items()}
+    
+    others = {'CPI':'CPIAUCSL','Initial Claims':'IC4WSA','Payrolls':'PAYEMS'}
+    point_urls = {k:\
+        'https://sandbox.iexapis.com/stable/data-points/market/{}?&token={}'\
+    .format(ind,api_key) for k,ind in others.items()}
+    
+    r_points = {ind:requests.get(url).json() for (ind,url) in point_urls.items()}
+    
+    time_series_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
+            for i in range(0,len(r_time['Real GDP'])))
+    time_series_df.columns=['Real GDP']
+    time_series_df['Real GDP Date'] = [datetime.datetime.\
+        fromtimestamp(r_time['Real GDP'][i]['updated']/1000).strftime('%Y-%m-%d') \
+            for i in range(0,len(r_time['Real GDP']))]
+    time_series_df['Unemployment Rate'] = [r_time['Unemployment Rate'][i]['value']\
+            for i in range(0,len(r_time['Unemployment Rate']))]
+    time_series_df['Unemployment Rate Date'] = [datetime.datetime.\
+        fromtimestamp(r_time['Unemployment Rate'][i]['updated']/1000).strftime('%Y-%m-%d') \
+            for i in range(0,len(r_time['Unemployment Rate']))]
+    
+    cpi = r_points['CPI']
+    ini_claims = r_points['Initial Claims']
+    
+    econ_fig = make_subplots(rows=1, cols=2,
+                        subplot_titles=('Real GDP','Unemployment Rate'))
+    econ_fig.append_trace(go.Line(x=time_series_df['Real GDP Date'],\
+                             y=time_series_df['Real GDP'],),row=1,col=1)
+    econ_fig.append_trace(go.Line(x=time_series_df['Unemployment Rate Date'],\
+                             y=time_series_df['Unemployment Rate'],),row=1,col=2)
+    econ_fig.update_layout(
+        showlegend = False,
+        plot_bgcolor = colors['background'],
+        paper_bgcolor = colors['background'],
+        font_family = 'monospace',
+        font_color = colors['text'],
+        )
+    return econ_fig 
+
 #app layout
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     
-    html.H1("Dashboard Header", 
+    html.H1("FUNDAMENTAL ANALYSIS DASHBOARD", 
             style = {
                 'text-align': 'center', 
                 'font-family': 'monospace',
                 'color': colors['text']}),
 
     html.Div([
-        html.H2('1st Section', 
+        html.H2('Fundamental Analysis', 
             style = {
                 'font-family': 'monospace',
                 'color': colors['text']}),
@@ -226,12 +274,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     ), #1st Div closing brackets
     
     html.Div([
-        html.Br(), html.Br(),
-        html.H2('2nd Section', 
-            style={
-                'font-family': 'monospace',
-                'color': colors['text']}),
-    
         dcc.DatePickerSingle(id='yield_curve_date',
                   min_date_allowed = dt(1965,7,7), 
                   max_date_allowed=datetime.date.today(),
@@ -254,19 +296,20 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     ), #2nd Div closing brackets
     
     html.Div([
-        html.H2('3rd Section',
+        html.H2('Economic Indicators',
             style={
             'font-family': 'monospace',
             'color': colors['text']}),    
     
-        dcc.Dropdown(id='indicator',
-            options=[{'label':'Unemployment', 'value':'Unemployment'}],
-            value='Unemployment',
-            style={'font-family':'monospace'}),
+        # dcc.Dropdown(id='indicator',
+        #     options=[{'label':'Unemployment Rate', 'value':'Unemployment Rate'},
+        #              {'label':'Real GDP','value':'Real GDP'}],
+        #     value='Unemployment Rate',
+        #     style={'font-family':'monospace'}),
 
         dcc.Graph(
             id='econ_graph',
-            figure={})
+            figure=plot_econ_indicators())
     ]
     ) #3rd Div closing brackets
     ]) #big block closing brackets
@@ -351,13 +394,6 @@ def update_yieldcurve(selected_date):
     treasury_names = list(treasuries.keys())
     treasury_symbols = list(treasuries.values())
     treasury_yields = {}
-
-    # today = datetime.date.today()
-    # day_of_week = calendar.day_name[selected_date]
-    # if selected_date == 'Saturday':
-    #     selected_date = selected_date - datetime.timedelta(days = 1)
-    # elif selected_date == 'Sunday':
-    #     selected_date = selected_date - datetime.timedelta(days = 2)
     
     for bill in list(treasuries.values()):
         treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
@@ -366,8 +402,8 @@ def update_yieldcurve(selected_date):
     yields = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
     yields.columns = ['Treasury','Yield [%]']
     yield_curve = px.bar(yields,x='Treasury',y='Yield [%]', color='Treasury',\
-                         color_discrete_sequence=['#B0E0E6','#ADD8E6',\
-                            '#87CEFA','#1E90FF'])
+                         color_discrete_sequence=['#E6E6FA','#D8BFD8',\
+                            '#BA55D3','#9932CC'])
     yield_curve.update_layout(
         showlegend= False,
         plot_bgcolor = colors['background'],
@@ -380,7 +416,6 @@ def update_yieldcurve(selected_date):
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
-    
     return yield_curve
 
 if __name__ == '__main__':
