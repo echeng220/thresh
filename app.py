@@ -21,6 +21,7 @@ from datetime import date
 import calendar
 
 app = dash.Dash(__name__)
+server = app.server
 
 #declare API key and name of stock to get
 api_key = 'Tpk_cec90dded9cd4f3b9c0295462c57fbcd'
