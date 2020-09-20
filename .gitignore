@@ -1,0 +1,4 @@
+thresh0_env
+*.pyc
+.env
+.DS_Store
