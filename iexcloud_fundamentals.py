@@ -26,6 +26,9 @@ def ratio_analysis(name,api_key):
     statements = ['balance-sheet','cash-flow','income']
     urls = {statement:'https://sandbox.iexapis.com/stable/stock/{}/{}?last=12&token={}'\
     .format(name,statement,api_key) for statement in statements}
+    info_url = 'https://sandbox.iexapis.com/stable/stock/{}/company?&token={}'\
+        .format(name,api_key)
+    info_r = requests.get(info_url).json()
 
     #create dictionary containing all financial statements requested from API
     #dictionary r has 3 keys, 1 for each financial statement
@@ -359,17 +362,20 @@ def econ_indicator(api_key):
     
     r_points = {ind:requests.get(url).json() for (ind,url) in point_urls.items()}
     
-    time_series_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
+    gdp_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
             for i in range(0,len(r_time['Real GDP'])))
-    time_series_df.columns=['Real GDP']
-    time_series_df['Real GDP Date'] = [datetime.datetime.\
+    gdp_df.columns=['Real GDP']
+    gdp_df['date'] = [datetime.datetime.\
         fromtimestamp(r_time['Real GDP'][i]['updated']/1000).strftime('%Y-%m-%d') \
             for i in range(0,len(r_time['Real GDP']))]
-    time_series_df['Unemployment Rate'] = [r_time['Unemployment Rate'][i]['value']\
-            for i in range(0,len(r_time['Unemployment Rate']))]
-    time_series_df['Unemployment Rate Date'] = [datetime.datetime.\
+    gdp_df = gdp_df.sort_values(by='date')
+    unem_df = pd.DataFrame(r_time['Unemployment Rate'][i]['value']\
+            for i in range(0,len(r_time['Unemployment Rate'])))
+    unem_df.columns = ['Unemployment Rate']
+    unem_df['date'] = [datetime.datetime.\
         fromtimestamp(r_time['Unemployment Rate'][i]['updated']/1000).strftime('%Y-%m-%d') \
             for i in range(0,len(r_time['Unemployment Rate']))]
+    unem_df = unem_df.sort_values(by='date')
     
     cpi = r_points['CPI']
     ini_claims = r_points['Initial Claims']

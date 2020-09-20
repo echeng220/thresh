@@ -39,12 +39,19 @@ col_labels = ['date','Gross Profit [%]','Net Profit [%]','EPS','ROE','Current Ra
             'Dividend Coverage']
 
 #FUNCTIONS TO DO RATIO ANALYSIS AND RETRIEVE PRICES
+def get_companyname(name,api_key):
+    info_url = 'https://sandbox.iexapis.com/stable/stock/{}/company?&token={}'\
+        .format(name,api_key)
+    info_r = requests.get(info_url).json()
+    company = info_r['companyName']
+    return company
+
 def ratio_analysis(name, api_key):
     #create dictionary of url's to make separate API requests for each financial statement
     statements = ['balance-sheet','cash-flow','income']
     urls = {statement:'https://sandbox.iexapis.com/stable/stock/{}/{}?last=12&token={}'\
     .format(name,statement,api_key) for statement in statements}
-
+    
     #create dictionary containing all financial statements requested from API
     #dictionary r has 3 keys, 1 for each financial statement
     #each key holds another nested dictionary with the 12 latest statements
@@ -172,17 +179,18 @@ def bench_returns():
     returns_fig = px.line(total_returns,x=total_returns.index,\
                           y=list(benchmarks.keys()))
     returns_fig.update_layout(
+        margin = dict(l=60, r=60, t=60, b=60),
         yaxis_title = 'Total Returns [%]',
         legend = dict(orientation='h',yanchor='bottom',\
-                      y=-0.35,xanchor='left',x=-0.1),
-        legend_title_text='Benchmarks:',
+                      y=-0.35,xanchor='left',x=0),
+        legend_title_text='Benchmarks:\n',
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
         font_color = colors['text'],
         title = {
             'text': '6 Month Returns of Common Benchmarks',
-            'y': 0.9,
+            'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
@@ -199,35 +207,39 @@ def plot_econ_indicators():
     #create dictionary containing all economic indicators requested from API
     r_time = {ind:requests.get(url).json() for (ind,url) in time_urls.items()}
     
-    others = {'CPI':'CPIAUCSL','Initial Claims':'IC4WSA','Payrolls':'PAYEMS'}
-    point_urls = {k:\
-        'https://sandbox.iexapis.com/stable/data-points/market/{}?&token={}'\
-    .format(ind,api_key) for k,ind in others.items()}
+    # others = {'CPI':'CPIAUCSL','Initial Claims':'IC4WSA','Payrolls':'PAYEMS'}
+    # point_urls = {k:\
+        # 'https://sandbox.iexapis.com/stable/data-points/market/{}?&token={}'\
+    # .format(ind,api_key) for k,ind in others.items()}
     
-    r_points = {ind:requests.get(url).json() for (ind,url) in point_urls.items()}
+    # r_points = {ind:requests.get(url).json() for (ind,url) in point_urls.items()}
     
-    time_series_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
+    gdp_df = pd.DataFrame(r_time['Real GDP'][i]['value'] \
             for i in range(0,len(r_time['Real GDP'])))
-    time_series_df.columns=['Real GDP']
-    time_series_df['Real GDP Date'] = [datetime.datetime.\
+    gdp_df.columns=['Real GDP']
+    gdp_df['date'] = [datetime.datetime.\
         fromtimestamp(r_time['Real GDP'][i]['updated']/1000).strftime('%Y-%m-%d') \
             for i in range(0,len(r_time['Real GDP']))]
-    time_series_df['Unemployment Rate'] = [r_time['Unemployment Rate'][i]['value']\
-            for i in range(0,len(r_time['Unemployment Rate']))]
-    time_series_df['Unemployment Rate Date'] = [datetime.datetime.\
+    gdp_df = gdp_df.sort_values(by='date')
+    unem_df = pd.DataFrame(r_time['Unemployment Rate'][i]['value']\
+            for i in range(0,len(r_time['Unemployment Rate'])))
+    unem_df.columns = ['Unemployment Rate']
+    unem_df['date'] = [datetime.datetime.\
         fromtimestamp(r_time['Unemployment Rate'][i]['updated']/1000).strftime('%Y-%m-%d') \
             for i in range(0,len(r_time['Unemployment Rate']))]
+    unem_df = unem_df.sort_values(by='date')
     
-    cpi = r_points['CPI']
-    ini_claims = r_points['Initial Claims']
+    # cpi = r_points['CPI']
+    # ini_claims = r_points['Initial Claims']
     
     econ_fig = make_subplots(rows=1, cols=2,
-                        subplot_titles=('Real GDP','Unemployment Rate'))
-    econ_fig.append_trace(go.Line(x=time_series_df['Real GDP Date'],\
-                             y=time_series_df['Real GDP'],),row=1,col=1)
-    econ_fig.append_trace(go.Line(x=time_series_df['Unemployment Rate Date'],\
-                             y=time_series_df['Unemployment Rate'],),row=1,col=2)
+                        subplot_titles=('Real GDP (USA)','Unemployment Rate (USA)'))
+    econ_fig.append_trace(go.Line(x=gdp_df['date'],\
+                             y=gdp_df['Real GDP'],),row=1,col=1)
+    econ_fig.append_trace(go.Line(x=unem_df['date'],\
+                             y=unem_df['Unemployment Rate'],),row=1,col=2)
     econ_fig.update_layout(
+        margin = dict(l=70, r=70, t=70, b=70),
         showlegend = False,
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
@@ -248,18 +260,35 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     html.Div([
         html.H2('Fundamental Analysis', 
             style = {
+                'text-align': 'center',
                 'font-family': 'monospace',
                 'color': colors['text']}),
-    
-        dcc.Input(id='select_stock',
+        html.Div([
+            dcc.Markdown('''### Ticker Symbol:''',
+                style = {
+                'font-family': 'monospace',
+                'color': colors['text']})
+        ],style={'width': '15%', 'display': 'inline-block'}),
+        
+        html.Div([             
+            dcc.Input(id='select_stock',
                  value = 'AAPL', type = 'text'),
+            ],style={'width': '85%', 'display': 'inline-block'}),
                  # style = {'font-family': 'monospace', 
                         # 'backgroundColor': colors['dcc'],
                         # 'color': colors['dcctext']}
-        dcc.Dropdown(id='metric',
-                     options=[{'label':col,'value':col} for col in col_labels[1:]],
-                     value='Net Profit [%]',
-                     style={'font-family':'monospace'}),
+        html.Div([
+            dcc.Markdown('''### Fundamental Metric:''',
+                style = {
+                'font-family': 'monospace',
+                'color': colors['text']})
+        ],style={'width':'18%','display':'inline-block','justify-content':'center'}),
+        html.Div([
+            dcc.Dropdown(id='metric',
+                options=[{'label':col,'value':col} for col in col_labels[1:]],
+                value='Net Profit [%]',
+                style={'font-family':'monospace'})],
+            style={'width':'81%','display':'inline-block','justify-content':'center'}),
         
         dcc.Graph(
         id = 'price_chart',
@@ -270,34 +299,55 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         figure={}
         )],
         #set layout for 1st Div
-        style={'height':'50%','width': '67%', 'display': 'inline-block'}
+        style={'width': '67%', 'display': 'inline-block'}
     ), #1st Div closing brackets
     
     html.Div([
-        dcc.DatePickerSingle(id='yield_curve_date',
-                  min_date_allowed = dt(1965,7,7), 
-                  max_date_allowed=datetime.date.today(),
-                  initial_visible_month=datetime.date.today(),
-                  date=datetime.date.today(),
-                  style={'font-family': 'monospace', 
-                          'backgroundColor': colors['dcc'],
-                          'color': colors['dcctext']}),
-        dcc.Graph(
-        id='yield_curve',
-        figure={}),
+        html.Div([
+            html.H2('Yield Curve & Benchmark Returns', 
+                style = {
+                'text-align': 'center',
+                'font-family': 'monospace',
+                'color': colors['text']}),
+            html.Div([
+                dcc.Markdown("""### Date:""",
+                        style = {
+                            'text-align': 'center',
+                            'font-family': 'monospace',
+                            'color': colors['text']})
+            ],
+            style={'width':'22%','display':'inline-block','justify-content':'center'}),
         
-        dcc.Graph(
-        id='returns_chart',
-        figure=bench_returns())
-        ],
+            html.Div([
+                dcc.DatePickerSingle(id='yield_curve_date',
+                        min_date_allowed = dt(1965,7,7), 
+                        max_date_allowed=datetime.date.today(),
+                        initial_visible_month=datetime.date.today(),
+                        date=datetime.date.today(),
+                        style={'font-family': 'monospace', 
+                          'backgroundColor': colors['dcc'],
+                          'color': colors['dcctext']})],
+            style={'width': '77%', 'display': 'inline-block'}),
+            ]),
+        html.Div([
+            dcc.Graph(
+                id='yield_curve',
+                figure={}),
+        
+            dcc.Graph(
+                id='returns_chart',
+                figure=bench_returns())
+            ])
+    ],
     #set layout for 2nd Div
-    style={'width': '33%', 'align': 'right',\
+        style={'width': '33%', 'align': 'right',\
            'display': 'inline-block'}
-    ), #2nd Div closing brackets
+        ), #2nd Div closing brackets
     
     html.Div([
         html.H2('Economic Indicators',
             style={
+            'text-align': 'center',
             'font-family': 'monospace',
             'color': colors['text']}),    
     
@@ -329,6 +379,7 @@ def update_charts(selected_stock, selected_metric):
     
     ratios = ratio_analysis(selected_stock, api_key)
     prices, ticker = get_prices(ratios, selected_stock)
+    company = get_companyname(selected_stock, api_key)
     
     # fig = make_subplots(rows=2, cols=1, shared_xaxes=True,\
     #                     subplot_titles=(f'{ticker}',\
@@ -344,14 +395,15 @@ def update_charts(selected_stock, selected_metric):
         fill='#CD5C5C'
     price_fig.update_traces(line_color=fill)
     price_fig.update_layout(
+        margin = dict(l=20, r=20, t=20, b=20),
         yaxis_title = 'Closing Price [$]',
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
         font_color = colors['text'],
         title = {
-            'text': f'{ticker}',
-            'y': 0.9,
+            'text': f'{ticker}: {company}',
+            'y': 1,
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
@@ -365,13 +417,14 @@ def update_charts(selected_stock, selected_metric):
     metric_fig.update_xaxes(range=[prices['date'].iloc[0], prices['date'].iloc[-1]])
     metric_fig.update_traces(line_color='#FFFF00')
     metric_fig.update_layout(
+        margin = dict(l=20, r=20, t=20, b=20),
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
         font_family = 'monospace',
         font_color = colors['text'],
         title = {
-            'text': f'{ticker} {selected_metric}',
-            'y': 0.9,
+            'text': f'{company} ({ticker}) : {selected_metric}',
+            'y': 1,
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
@@ -400,11 +453,12 @@ def update_yieldcurve(selected_date):
                         yf.Ticker(bill).history(start=selected_date).Close[0]})
 
     yields = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
-    yields.columns = ['Treasury','Yield [%]']
-    yield_curve = px.bar(yields,x='Treasury',y='Yield [%]', color='Treasury',\
-                         color_discrete_sequence=['#E6E6FA','#D8BFD8',\
-                            '#BA55D3','#9932CC'])
+    yields.columns = ['Treasury Security','Yield [%]']
+    yield_curve = px.bar(yields,x='Treasury Security',y='Yield [%]',\
+            color='Treasury Security',color_discrete_sequence=\
+                ['#E6E6FA','#D8BFD8','#BA55D3','#9932CC'])
     yield_curve.update_layout(
+        margin = dict(l=60, r=60, t=60, b=60),
         showlegend= False,
         plot_bgcolor = colors['background'],
         paper_bgcolor = colors['background'],
@@ -412,7 +466,7 @@ def update_yieldcurve(selected_date):
         font_color = colors['text'],
         title = {
             'text': f'Yield Curve for {selected_date}',
-            'y': 0.9,
+            'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
