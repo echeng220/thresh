@@ -251,7 +251,7 @@ def plot_econ_indicators():
 #app layout
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     
-    html.H1("FUNDAMENTAL ANALYSIS DASHBOARD", 
+    html.H1("thresh (v.0): A Fundamental & Macroeconomic Analysis Dashboard", 
             style = {
                 'text-align': 'center', 
                 'font-family': 'monospace',
@@ -448,6 +448,19 @@ def update_yieldcurve(selected_date):
     treasury_symbols = list(treasuries.values())
     treasury_yields = {}
     
+    selected_date = dt.strptime(selected_date,'%Y-%m-%d')
+    day_of_week = calendar.day_name[selected_date.weekday()]
+    if 'Saturday' in day_of_week:
+        selected_date = selected_date - datetime.timedelta(days = 1)
+    elif 'Sunday' in day_of_week:
+        selected_date = selected_date - datetime.timedelta(days = 2)
+    elif 'Friday' in day_of_week:
+        selected_date = selected_date - datetime.timedelta(days = 1)
+    elif 'Monday' in day_of_week:
+        selected_date = selected_date - datetime.timedelta(days = 4)
+    day_of_week = calendar.day_name[selected_date.weekday()]
+    selected_date = selected_date.strftime('%Y-%m-%d')
+    
     for bill in list(treasuries.values()):
         treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
                         yf.Ticker(bill).history(start=selected_date).Close[0]})
@@ -465,7 +478,7 @@ def update_yieldcurve(selected_date):
         font_family = 'monospace',
         font_color = colors['text'],
         title = {
-            'text': f'Yield Curve for {selected_date}',
+            'text': f'Yield Curve for {day_of_week}, {selected_date}',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',

@@ -11,7 +11,7 @@ import numpy as np
 import yfinance as yf
 import matplotlib.pyplot as plt
 import seaborn as sns
-import datetime
+from datetime import datetime
 from datetime import date
 import calendar
 import time
@@ -302,7 +302,6 @@ def plot_yield_curve(today=datetime.date.today()):
         today = today - datetime.timedelta(days = 1)
     elif day_of_week == 'Sunday':
         today = today - datetime.timedelta(days = 2)
-    new_day_of_week = calendar.day_name[today.weekday()]
     
     for bill in list(treasuries.values()):
         treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
