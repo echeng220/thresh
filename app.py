@@ -172,7 +172,7 @@ def bench_returns():
         benchmark_prices.update({list(benchmarks.keys())[i]:
         yf.Ticker(str(list(benchmarks.values())[i])).history(period='6mo')['Close']})
             
-    prices_df = pd.DataFrame(benchmark_prices).dropna()
+    prices_df = pd.DataFrame(benchmark_prices).drop_duplicates(keep = 'last').dropna()
     returns = prices_df.pct_change(fill_method='ffill').dropna()
     cumul_returns = (1 + returns).cumprod()
     total_returns = (cumul_returns - 1) * 100
