@@ -205,7 +205,7 @@ def plot_prices(prices, company):
 def plot_metrics(ratios_df, prices, selected_metric, company):
     metric_fig = px.line(ratios_df, x='date', y=selected_metric)
     metric_fig.update_xaxes(range=[prices['date'].iloc[0], prices['date'].iloc[-1]])
-    metric_fig.update_traces(line_color='#FFFF00')
+    metric_fig.update_traces(line_color='darkturquoise')
     metric_fig.update_layout(
         margin = dict(l=20, r=20, t=20, b=20),
         plot_bgcolor = COLORS['background'],

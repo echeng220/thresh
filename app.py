@@ -60,7 +60,8 @@ def plot_econ_indicators():
         go.Scatter(
             x=gdp_df['date'],
             y=gdp_df['Real GDP'],
-            mode='lines'
+            mode='lines',
+            line={'color': 'darkturquoise'}
         ),
         row=1,
         col=1
@@ -69,7 +70,8 @@ def plot_econ_indicators():
         go.Scatter(
             x=unemployment_df['date'],
             y=unemployment_df['Unemployment Rate'],
-            mode='lines'
+            mode='lines',
+            line={'color': 'dodgerblue'}
         ),
         row=1,
         col=2
@@ -91,7 +93,7 @@ server = app.server
 app.layout = html.Div(
     style={'backgroundColor': COLORS['background']},
     children=[
-        html.H1("thresh (v.0): A Fundamental & Macroeconomic Analysis Dashboard", 
+        html.H1("thresh (v.1): A Fundamental & Macroeconomic Analysis Dashboard", 
             style = {
                 'text-align': 'center', 
                 'font-family': 'monospace',
@@ -306,7 +308,7 @@ def update_yield_curve(selected_date):
     yields.columns = ['Treasury Security','Yield [%]']
     yield_curve = px.bar(yields,x='Treasury Security',y='Yield [%]',\
             color='Treasury Security',color_discrete_sequence=\
-                ['#E6E6FA','#D8BFD8','#BA55D3','#9932CC'])
+                ['azure','paleturquoise','darkturquoise','dodgerblue'])
     yield_curve.update_layout(
         margin = dict(l=60, r=60, t=60, b=60),
         showlegend= False,
@@ -323,5 +325,5 @@ def update_yield_curve(selected_date):
     return yield_curve
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
     
