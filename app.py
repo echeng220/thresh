@@ -175,9 +175,11 @@ app.layout = html.Div(
     )
 
 def update_charts(n_clicks, selected_stock, selected_metric):
-    """Update the price chart and fundamental analysis
+    """
+    Update the price chart and fundamental analysis
     for a selected stock. Inputs are the selected stock and chosen 
-    fundamentals metric."""
+    fundamentals metric.
+    """
     if n_clicks is not None:
         company = Company(selected_stock)
     else:
@@ -203,8 +205,10 @@ def update_charts(n_clicks, selected_stock, selected_metric):
     Input(component_id='yield_curve_date', component_property='date')
     )
 def update_yield_curve(selected_date):
-    """Update the yield curve with the selected date (default today),
-    and show the previous 6 months of returns for some benchmarks."""
+    """
+    Update the yield curve with the selected date (default today),
+    and show the previous 6 months of returns for some benchmarks.
+    """
     
     treasuries = {'13 Week':'^IRX','5 Year':'^FVX','10 Year':'^TNX',\
                   '30 Year':'^TYX'}
@@ -217,15 +221,18 @@ def update_yield_curve(selected_date):
     
     for bill in treasury_symbols:
         name = treasury_names[treasury_symbols.index(bill)]
-        yield_df = yf.Ticker(bill).history(start=selected_date)
-        if 'Close' in yield_df and len(yield_df.Close > 0):
-            _yield = yield_df.Close[0]
-        else:
-            prev_date = selected_date
-            _yield = None
-            while not _yield:
-                prev_date = prev_date - datetime.timedelta(days = 1)
-                _yield = yf.Ticker(bill).history(start=prev_date).Close[0]
+        try:
+            yield_df = yf.Ticker(bill).history(start=selected_date)
+            if 'Close' in yield_df and len(yield_df.Close > 0):
+                _yield = yield_df.Close[0]
+            else:
+                prev_date = selected_date
+                _yield = None
+                while not _yield:
+                    prev_date = prev_date - datetime.timedelta(days = 1)
+                    _yield = yf.Ticker(bill).history(start=prev_date).Close[0]
+        except JSONDecodeError:
+            _yield = 0
         treasury_yields.update({name: _yield})
 
     yields = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()

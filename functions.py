@@ -236,9 +236,11 @@ def plot_metrics(ratios_df, prices, selected_metric, company):
 def plot_benchmarks():
     total_returns = benchmark_returns()
 
-    returns_fig = px.line(total_returns,
+    returns_fig = px.line(
+        total_returns,
         x=total_returns.index,
-        y=list(BENCHMARKS.keys()))
+        y=list(BENCHMARKS.keys())
+    )
 
     returns_fig.update_layout(
         margin = dict(l=60, r=60, t=60, b=60),
@@ -299,11 +301,11 @@ def plot_econ_indicators():
     )
     econ_fig.update_layout(
         margin=dict(l=70, r=70, t=70, b=70),
-        showlegend = False,
-        plot_bgcolor = COLORS['background'],
-        paper_bgcolor = COLORS['background'],
-        font_family = 'monospace',
-        font_color = COLORS['text'],
+        showlegend=False,
+        plot_bgcolor=COLORS['background'],
+        paper_bgcolor=COLORS['background'],
+        font_family='monospace',
+        font_color=COLORS['text']
     )
     return econ_fig
 
@@ -353,7 +355,7 @@ class Company:
         self.balance_sheets = get_company_statements(ticker, 'balance-sheet')
         self.cash_flow_statements = get_company_statements(ticker, 'cash-flow')
         self.income_statements = get_company_statements(ticker, 'income')
-        
+
 
         self.dates = []
         self.gross_profit_margins = []
