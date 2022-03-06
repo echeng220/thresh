@@ -4,6 +4,8 @@ Welcom to the thresh repo!
 
 thresh is a dashboard I built to help retail investors make smarter investment decisions.
 
+I hope you enjoy the https://thresh0.herokuapp.com/](dashboard)!
+
 ## What does thresh do?
 
 thresh has a couple of key features to provide more insight into the fundamental performance of a company.
@@ -14,6 +16,8 @@ thresh has a couple of key features to provide more insight into the fundamental
     - Users can select any day of the year and view the yield curve on that day. 
 4. Benchmark returns visualization.
     - This visualization doesn't have an interactive component, but allows users to see recent historical returns of common benchmarks.
+
+NOTE: This version of thresh uses IEX Cloud sandbox data, which means that the values displayed are not real. A secured version of the dashboard under construction, using real-time financial data from IEX Cloud.
 
 ## How is thresh built?
 

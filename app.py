@@ -12,7 +12,7 @@ from dash.dependencies import Input, Output, State
 
 from functions import *
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, eager_loading=True)
 server = app.server
 
 #app layout
