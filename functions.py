@@ -33,31 +33,43 @@ INDICATORS = {'Real GDP':'A191RL1Q225SBEA','Unemployment Rate':'UNRATE'}
 
 def get_company_name(ticker):
     info_url = f'https://sandbox.iexapis.com/stable/stock/{ticker}/company?&token={API_KEY}'
-    info_r = requests.get(info_url).json()
-    company = info_r['companyName']
-    return company
+    response = requests.get(info_url)
+    if response.status_code != 204:
+        response = response.json()
+        company = response['companyName']
+        return company
+    else:
+        return None
 
 def get_company_statements(ticker, statement):
     '''Get last 12 financial statements of a company.'''
     url = f'https://sandbox.iexapis.com/stable/stock/{ticker}/{statement}?last=12&token={API_KEY}'
-    statements = requests.get(url).json()
-    if statement == 'balance-sheet':
-        return statements['balancesheet']
-    elif statement == 'cash-flow':
-        return statements['cashflow']
-    elif statement == 'income':
-        return statements['income']
+    response = requests.get(url)
+    if response.status_code != 204:
+        response = response.json()
+        if statement == 'balance-sheet':
+            return response['balancesheet']
+        elif statement == 'cash-flow':
+            return response['cashflow']
+        elif statement == 'income':
+            return response['income']
+    else:
+        return None
 
 def get_indicator(indicator):
     '''Last 24 hours of economic data.'''
     url = f'https://sandbox.iexapis.com/stable/time-series/economic/{INDICATORS[indicator]}?last=24&token={API_KEY}'
-    r = requests.get(url).json()
-    indicator_data = [point['value'] for point in r]
-    date_data = [datetime.datetime.fromtimestamp(point['updated'] / 1000).strftime('%Y-%m-%d')\
-        for point in r]
-    indicator_dict = {indicator: indicator_data, 'date': date_data}
-    indicator_df = pd.DataFrame(indicator_dict)
-    indicator_df = indicator_df.sort_values(by='date')
+    response = requests.get(url)
+    if response.status_code != 204:
+        response = response.json()
+        indicator_data = [point['value'] for point in response]
+        date_data = [datetime.datetime.fromtimestamp(point['updated'] / 1000).strftime('%Y-%m-%d')\
+            for point in response]
+        indicator_dict = {indicator: indicator_data, 'date': date_data}
+        indicator_df = pd.DataFrame(indicator_dict)
+        indicator_df = indicator_df.sort_values(by='date')
+    else:
+        indicator_df = pd.DataFrame()
     return indicator_df
 
 def gross_profit_margin(gross_profit, total_revenue):
@@ -336,9 +348,12 @@ class Company:
     def __init__(self, ticker):
         self.ticker = ticker
         self.name = get_company_name(ticker)
+        if not self.name:
+            self.name = 'Company Inc.'
         self.balance_sheets = get_company_statements(ticker, 'balance-sheet')
         self.cash_flow_statements = get_company_statements(ticker, 'cash-flow')
         self.income_statements = get_company_statements(ticker, 'income')
+        
 
         self.dates = []
         self.gross_profit_margins = []
