@@ -1,4 +1,5 @@
 import requests
+import logging
 import pandas as pd
 import yfinance as yf
 import datetime
@@ -7,7 +8,6 @@ import plotly.express as px  # (version 4.7.0)
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from app import app
 
 API_KEY = 'Tpk_cec90dded9cd4f3b9c0295462c57fbcd'
 
@@ -35,7 +35,7 @@ INDICATORS = {'Real GDP':'A191RL1Q225SBEA','Unemployment Rate':'UNRATE'}
 def get_company_name(ticker):
     info_url = f'https://sandbox.iexapis.com/stable/stock/{ticker}/company?&token={API_KEY}'
     info_r = requests.get(info_url).json()
-    app.logger.info(info_r)
+    logging.info(info_r)
     company = info_r['companyName']
     return company
 
@@ -43,7 +43,7 @@ def get_company_statements(ticker, statement):
     '''Get last 12 financial statements of a company.'''
     url = f'https://sandbox.iexapis.com/stable/stock/{ticker}/{statement}?last=12&token={API_KEY}'
     statements = requests.get(url).json()
-    app.logger.info(statements)
+    logging.info(statements)
     if statement == 'balance-sheet':
         return statements['balancesheet']
     elif statement == 'cash-flow':
@@ -55,7 +55,7 @@ def get_indicator(indicator):
     '''Last 24 hours of economic data.'''
     url = f'https://sandbox.iexapis.com/stable/time-series/economic/{INDICATORS[indicator]}?last=24&token={API_KEY}'
     r = requests.get(url).json()
-    app.logger.info(r)
+    logging.info(r)
     indicator_data = [point['value'] for point in r]
     date_data = [datetime.datetime.fromtimestamp(point['updated'] / 1000).strftime('%Y-%m-%d')\
         for point in r]
