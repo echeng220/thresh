@@ -183,11 +183,7 @@ def update_charts(n_clicks, selected_stock, selected_metric):
     else:
         company = Company('AAPL')
 
-    app.logger.info(company.name)
-    try:
-        ratios_df = company.compute_ratios()
-    except JSONDecodeError:
-        app.logger.info(company.name)
+    ratios_df = company.compute_ratios()
 
     startdate = ratios_df.iloc[0]['date']
     prices, ticker = get_prices(startdate, selected_stock)
@@ -218,26 +214,29 @@ def update_yield_curve(selected_date):
     
     selected_date = dt.strptime(selected_date,'%Y-%m-%d')
     day_of_week = calendar.day_name[selected_date.weekday()]
-    if 'Saturday' in day_of_week:
-        selected_date = selected_date - datetime.timedelta(days = 1)
-    elif 'Sunday' in day_of_week:
-        selected_date = selected_date - datetime.timedelta(days = 2)
-    elif 'Friday' in day_of_week:
-        selected_date = selected_date - datetime.timedelta(days = 1)
-    elif 'Monday' in day_of_week:
-        selected_date = selected_date - datetime.timedelta(days = 4)
-    day_of_week = calendar.day_name[selected_date.weekday()]
-    selected_date = selected_date.strftime('%Y-%m-%d')
     
-    for bill in list(treasuries.values()):
-        treasury_yields.update({treasury_names[treasury_symbols.index(bill)] :\
-                        yf.Ticker(bill).history(start=selected_date).Close[0]})
+    for bill in treasury_symbols:
+        name = treasury_names[treasury_symbols.index(bill)]
+        yield_df = yf.Ticker(bill).history(start=selected_date)
+        if 'Close' in yield_df and len(yield_df.Close > 0):
+            _yield = yield_df.Close[0]
+        else:
+            prev_date = selected_date
+            _yield = None
+            while not _yield:
+                prev_date = prev_date - datetime.timedelta(days = 1)
+                _yield = yf.Ticker(bill).history(start=prev_date).Close[0]
+        treasury_yields.update({name: _yield})
 
     yields = pd.DataFrame(treasury_yields,index=[0]).transpose().reset_index()
-    yields.columns = ['Treasury Security','Yield [%]']
-    yield_curve = px.bar(yields,x='Treasury Security',y='Yield [%]',\
-            color='Treasury Security',color_discrete_sequence=\
-                ['azure','paleturquoise','darkturquoise','dodgerblue'])
+    yields.columns = ['Treasury Security', 'Yield [%]']
+    yield_curve = px.bar(
+        yields,
+        x='Treasury Security',
+        y='Yield [%]',
+        color='Treasury Security',
+        color_discrete_sequence=['azure','paleturquoise','darkturquoise','dodgerblue']
+    )
     yield_curve.update_layout(
         margin = dict(l=60, r=60, t=60, b=60),
         showlegend= False,
@@ -250,7 +249,9 @@ def update_yield_curve(selected_date):
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
-            'yanchor': 'top'})
+            'yanchor': 'top'
+        }
+    )
     return yield_curve
 
 if __name__ == '__main__':
