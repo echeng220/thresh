@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 import calendar
+from json import JSONDecodeError
 
 import plotly.express as px  # (version 4.7.0)
 
@@ -182,7 +183,11 @@ def update_charts(n_clicks, selected_stock, selected_metric):
     else:
         company = Company('AAPL')
 
-    ratios_df = company.compute_ratios()
+    app.logger.info(company.name)
+    try:
+        ratios_df = company.compute_ratios()
+    except JSONDecodeError:
+        app.logger.info(company.name)
 
     startdate = ratios_df.iloc[0]['date']
     prices, ticker = get_prices(startdate, selected_stock)
