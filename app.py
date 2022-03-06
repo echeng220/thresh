@@ -2,8 +2,6 @@ from datetime import datetime as dt
 import calendar
 
 import plotly.express as px  # (version 4.7.0)
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 import dash 
 import dash_core_components as dcc
