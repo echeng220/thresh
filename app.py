@@ -180,24 +180,25 @@ def update_charts(n_clicks, selected_stock, selected_metric):
     for a selected stock. Inputs are the selected stock and chosen 
     fundamentals metric.
     """
-    if n_clicks is not None:
-        company = Company(selected_stock)
-    else:
-        company = Company('AAPL')
+    try:
+        if n_clicks is not None:
+            company = Company(selected_stock)
+        else:
+            company = Company('AAPL')
 
-    ratios_df = company.compute_ratios()
+        ratios_df = company.compute_ratios()
 
-    startdate = ratios_df.iloc[0]['date']
-    prices, ticker = get_prices(startdate, selected_stock)
+        startdate = ratios_df.iloc[0]['date']
+        prices, ticker = get_prices(startdate, selected_stock)
 
-    #plot prices
-    price_fig = plot_prices(prices, company)
+        #plot prices
+        price_fig = plot_prices(prices, company)
 
-    #plot metrics
-    metric_fig = plot_metrics(ratios_df, prices, selected_metric, company)
-        
-
-    return price_fig, metric_fig
+        #plot metrics
+        metric_fig = plot_metrics(ratios_df, prices, selected_metric, company)
+        return price_fig, metric_fig
+    except JSONDecodeError:
+        pass    
 
 #connect Plotly yield curve/return history with Dash components
 @app.callback(
